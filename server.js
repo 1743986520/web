@@ -62,26 +62,16 @@ wss.on('connection', (ws) => {
         room.guest = ws;
         currentRoom = data.roomId;
         
-        // 通知双方玩家
+        // 通知加入者
         ws.send(JSON.stringify({ 
-          type: 'room_joined', 
-          roomId: data.roomId 
+          type: 'room_joined',
+          role: room.guestRole
         }));
         
+        // 通知主机
         room.host.send(JSON.stringify({ 
-          type: 'player_joined' 
-        }));
-        
-        // 发送角色信息
-        ws.send(JSON.stringify({ 
-          type: 'role', 
-          role: room.guestRole 
-        }));
-        
-        // 通知主机发送角色
-        room.host.send(JSON.stringify({ 
-          type: 'role', 
-          role: room.hostRole 
+          type: 'player_joined',
+          role: room.hostRole
         }));
       }
       
@@ -94,7 +84,8 @@ wss.on('connection', (ws) => {
         if (target && target.readyState === WebSocket.OPEN) {
           target.send(JSON.stringify({
             type: 'move',
-            pos: data.pos
+            pos: data.pos,
+            player: data.player
           }));
         }
       }
