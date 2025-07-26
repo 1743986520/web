@@ -77,6 +77,12 @@ wss.on('connection', (ws) => {
           type: 'role', 
           role: room.guestRole 
         }));
+        
+        // 通知主机发送角色
+        room.host.send(JSON.stringify({ 
+          type: 'role', 
+          role: room.hostRole 
+        }));
       }
       
       // 3. 游戏动作
@@ -93,21 +99,7 @@ wss.on('connection', (ws) => {
         }
       }
       
-      // 4. 角色分配
-      else if (data.type === 'role' && currentRoom) {
-        const room = rooms.get(currentRoom);
-        if (!room) return;
-        
-        const target = ws === room.host ? room.guest : room.host;
-        if (target && target.readyState === WebSocket.OPEN) {
-          target.send(JSON.stringify({
-            type: 'role',
-            role: data.role
-          }));
-        }
-      }
-      
-      // 5. 重置游戏
+      // 4. 重置游戏
       else if (data.type === 'reset' && currentRoom) {
         const room = rooms.get(currentRoom);
         if (!room) return;
