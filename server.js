@@ -1,8 +1,29 @@
+// server.js - WebSocket对战服务器
 const WebSocket = require('ws');
 const wss = new WebSocket.Server({ port: process.env.PORT || 8080 });
 
-// 房间存储结构: { [roomId]: { host: WebSocket, guest: WebSocket } }
+// 房间存储结构: { [roomId]: { host: WebSocket, guest: WebSocket, hostRole: string, guestRole: string } }
 const rooms = new Map();
+
+// 聊天服务器列表
+const chatServers = [
+  "https://chat-server-1-rhl5.onrender.com",
+  "https://chat-server-2-rxjx.onrender.com",
+  "https://chat-server-3-whxs.onrender.com",
+  "https://chat-server-4-qdax.onrender.com",
+  "https://chat-server-5-midt.onrender.com"
+];
+
+// 启动聊天服务器心跳检测
+setInterval(() => {
+  chatServers.forEach(server => {
+    fetch(`${server}/ping`)
+      .then(res => {
+        if (!res.ok) console.error(`${server} 心跳失败`);
+      })
+      .catch(err => console.error(`${server} 不可用`, err));
+  });
+}, 5 * 60 * 1000); // 每5分钟检测一次
 
 wss.on('connection', (ws) => {
   console.log('新的客户端连接');
@@ -103,6 +124,23 @@ wss.on('connection', (ws) => {
         }
       }
       
+      // 5. 聊天消息
+      else if (data.type === 'chat' && currentRoom) {
+        const room = rooms.get(currentRoom);
+        if (!room) return;
+        
+        // 广播给房间内所有玩家
+        [room.host, room.guest].forEach(client => {
+          if (client && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'chat',
+              sender: data.sender,
+              message: data.message
+            }));
+          }
+        });
+      }
+      
     } catch (e) {
       console.error('消息处理错误:', e);
     }
@@ -138,4 +176,4 @@ wss.on('connection', (ws) => {
   });
 });
 
-console.log('信令服务器已启动，端口:', process.env.PORT || 8080);
+console.log('对战服务器已启动，端口:', process.env.PORT || 8080);
